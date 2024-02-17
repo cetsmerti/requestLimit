@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Asynchronous HTTP Requests</title>
+  </head>
+  <body>
+    <label for="concurrency">Concurrency Limit (0-100):</label>
+    <input type="number" id="concurrency" min="0" max="100" required />
+    <button id="startButton" onclick="startRequests()">Start</button>
+    <ul id="results"></ul>
+
+    <script>
+      async function startRequests() {
+        const concurrencyInput = parseInt(
+          document.getElementById("concurrency").value
+        );
+        const resultContainer = document.getElementById("results");
+        const concurrency = concurrencyInput;
+        if (Number(concurrency) > 100 || Number(concurrency) < 0) {
+          return;
+        }
+
+        async function request(index) {
+          try {
+            const response = await fetch("/api", {
+              method: "POST",
+              body: JSON.stringify({ index }),
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+            console.log(`Request ${index} sent, status: ${response.status}`);
+            return response;
+          } catch (error) {
+            console.error(`Error sending request ${index}:`, error);
+            throw error;
+          }
+        }
+
+        async function sendRequest(index) {
+          try {
+            const response = await request(index);
+            const listItem = document.createElement("li");
+            listItem.textContent = `Request ${index}: ${response.status}`;
+            resultContainer.appendChild(listItem);
+          } catch (error) {
+            // Handle error
+          }
+        }
+
+        const interval = 1000 / concurrency;
+        let index = 0;
+
+        async function sendRequestsInInterval() {
+          if (index >= 1000) {
+            document.getElementById("startButton").disabled = false;
+            return;
+          }
+          for (let i = 0; i < concurrency; i++) {
+            index++;
+            sendRequest(index);
+          }
+          sendRequestsInInterval();
+        }
+
+        document.getElementById("startButton").disabled = true;
+        await sendRequestsInInterval();
+      }
+    </script>
+  </body>
+</html>
